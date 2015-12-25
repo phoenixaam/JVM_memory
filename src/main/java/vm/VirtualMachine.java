@@ -138,7 +138,8 @@ public class VirtualMachine {
                 Memory memoryToClean = findMemoryToClean(memoryToMove);
                 if (memoryToClean.getSize() > 0) {
                     // determine user for memory
-                        int userId = memoryUsage[memoryToMove.getFromIndex()];
+                    // not now
+//                        int userId = memoryUsage[memoryToMove.getFromIndex()];
                     // move data
                     System.arraycopy(memory, memoryToMove.getFromIndex(), memory, memoryToClean.getFromIndex(), memoryToMove.getSize());
                     // move usage
@@ -152,7 +153,7 @@ public class VirtualMachine {
                     lastGivenMemory = new Memory(memoryToClean.getFromIndex(), memoryToClean.getFromIndex() + memoryToMove.getSize() - 1);
                     // set new memory to user
                     // // TODO: 25.12.2015 find user by id and set him new memory
-
+                    // scan memoryUsage
                 }
             }
         }
@@ -161,14 +162,12 @@ public class VirtualMachine {
             lastGivenMemory = Objects.requireNonNull(lastGivenMemory);
             int from = 0;
             int to = 0;
-            //// TODO: 25.12.2015 искать память в пределах одного юзера!!!
             for (int i = lastGivenMemory.getToIndex(); i >= 0; i--) {
                 if (to > 0 && memoryUsage[i] != 0 ) {
                     from = i;
                 } else if (memoryUsage[i] != 0) {
                     from = i;
                     to = i;
-                    userId = memoryUsage[i];
                 } else if (from != 0) {
                     break;
                 }
