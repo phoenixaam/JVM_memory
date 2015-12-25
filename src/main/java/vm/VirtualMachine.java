@@ -35,7 +35,7 @@ public class VirtualMachine {
         VirtualMachine virtualMachine = VirtualMachine.getInstance();
         for (int i = 0; i < 10; i++) {
             boolean flag;
-            System.out.println("итерация " + i);
+            System.out.println("iteration " + i);
             User user1 = new User();
             User user2 = new User();
             User user3 = new User();
@@ -43,37 +43,44 @@ public class VirtualMachine {
             if (flag) {
                 user1.usingMemory(virtualMachine.memory);
                 System.out.println("user " + user1.getUserId() + " take 25");
+            } else {
+                System.out.println("user " + user1.getUserId() + " can't take 25");
             }
             flag = user2.askForMemory(15);
             if (flag) {
                 user2.usingMemory(virtualMachine.memory);
                 System.out.println("user " + user2.getUserId() + " take 15");
+            } else {
+                System.out.println("user " + user2.getUserId() + " can't take 15");
             }
             flag = user3.askForMemory(5);
             if (flag) {
                 user3.usingMemory(virtualMachine.memory);
                 System.out.println("user " + user3.getUserId() + " take 5");
+            } else {
+                System.out.println("user " + user3.getUserId() + " can't take 5");
             }
             flag = user1.release();
             if (flag) {
-                System.out.println("user " + user1.getUserId() + " release");
+                System.out.println("user " + user1.getUserId() + " release memory");
             }
             printMemory();
             while (virtualMachine.calculateFreeSpace() < virtualMachine.minFreeMemorySize) {
-                System.out.println("мало памяти: " + virtualMachine.calculateFreeSpace());
-                System.out.println("запуск GC");
+                System.out.println("memory lack: " + virtualMachine.calculateFreeSpace() + " left");
+                System.out.println("starting GC");
                 virtualMachine.new GC().clean();
+                System.out.println("free memory after cleaning: " + virtualMachine.calculateFreeSpace());
                 printMemory();
             }
             flag = user2.release();
             if (flag) {
-                System.out.println("user " + user2.getUserId() + " release");
+                System.out.println("user " + user2.getUserId() + " release memory");
             }
         }
     }
 
     private static void printMemory() {
-        System.out.println("memoryUsage:");
+        System.out.println("memoryUsageByUser:");
         for (int i : virtualMachine.memoryUsage) {
             System.out.print(i + " ");
         }
@@ -132,29 +139,41 @@ public class VirtualMachine {
 
     private class GC {
         public void clean() {
+
             Memory memoryToMove = findMemoryToMove();
 
             if (memoryToMove.getFromIndex() > 0) {
                 Memory memoryToClean = findMemoryToClean(memoryToMove);
                 if (memoryToClean.getSize() > 0) {
-                    // determine user for memory
-                    // not now
-//                        int userId = memoryUsage[memoryToMove.getFromIndex()];
                     // move data
                     System.arraycopy(memory, memoryToMove.getFromIndex(), memory, memoryToClean.getFromIndex(), memoryToMove.getSize());
                     // move usage
                     System.arraycopy(memoryUsage, memoryToMove.getFromIndex(), memoryUsage, memoryToClean.getFromIndex(), memoryToMove.getSize());
                     // clean free space
                     for (int i = memoryToClean.getFromIndex() + memoryToMove.getSize(); i <= memoryToMove.getToIndex(); i++) {
-                        memory[i] = 0;
+                        memory[i] = null;
                         memoryUsage[i] = 0;
                     }
                     // move last given
                     lastGivenMemory = new Memory(memoryToClean.getFromIndex(), memoryToClean.getFromIndex() + memoryToMove.getSize() - 1);
                     // set new memory to user
-                    // // TODO: 25.12.2015 find user by id and set him new memory
-                    // scan memoryUsage
+                    // scan new memoryUsage, define userId, define memory range and update it in user Memory object
+                    arrangeNewMemoryToUsers(memoryToClean.getFromIndex(), memoryToClean.getFromIndex() + memoryToMove.getSize());
                 }
+            }
+        }
+
+        private void arrangeNewMemoryToUsers(int fromIndex, int toIndex) {
+            for (int i = fromIndex; i < toIndex; ) {
+                int userId = memoryUsage[i];
+                int from = i;
+                int to = i;
+                while (memoryUsage[i++] == userId) {
+                    to = i;
+                }
+                Memory newMemoryForUser = new Memory(from, to);
+                User user = Objects.requireNonNull(User.getUserById(userId));
+                user.setUserMemory(newMemoryForUser);
             }
         }
 
@@ -163,7 +182,7 @@ public class VirtualMachine {
             int from = 0;
             int to = 0;
             for (int i = lastGivenMemory.getToIndex(); i >= 0; i--) {
-                if (to > 0 && memoryUsage[i] != 0 ) {
+                if (to > 0 && memoryUsage[i] != 0) {
                     from = i;
                 } else if (memoryUsage[i] != 0) {
                     from = i;
